@@ -1,0 +1,33 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
+from pipeline import InvestigationPipeline # Assuming the logic is here
+from llm import LLMManager
+
+app = FastAPI(title="A2Z Intelligence API")
+pipeline = InvestigationPipeline()
+llm = LLMManager()
+
+class QueryRequest(BaseModel):
+    prompt: str
+    context: str = ""
+
+class QueryResponse(BaseModel):
+    result: str
+    source: str
+
+@app.get("/")
+async def root():
+    return {"status": "online", "project": "A2Z Intelligence Server"}
+
+@app.post("/investigate", response_model=QueryResponse)
+async def investigate(request: QueryRequest):
+    try:
+        # This wraps the original 'robin' pipeline logic
+        result = pipeline.run(request.prompt, request.context)
+        return QueryResponse(result=result, source="A2Z Pipeline")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
